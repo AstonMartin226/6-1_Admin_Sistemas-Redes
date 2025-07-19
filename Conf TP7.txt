@@ -1,0 +1,235 @@
+Ejercicio 1: ACL Extendida con VLAN
+Ubicación: Router R2.
+Interfaz: GigabitEthernet0/0/0.30 y GigabitEthernet0/0/0.40.
+
+Router R2:
+enable
+configure terminal
+ip access-list extended ONLY_FTP_ACCESS
+ permit tcp any host 192.168.1.12 eq ftp
+ permit tcp any host 192.168.1.12 eq ftp-data
+ deny ip any any
+
+interface GigabitEthernet0/0/0.30
+ ip access-group ONLY_FTP_ACCESS in
+interface GigabitEthernet0/0/0.40
+ ip access-group ONLY_FTP_ACCESS in
+end
+write memory
+
+
+Ubicación: Router R1.
+Interfaz: GigabitEthernet0/0/0.10.
+
+Router R1:
+enable
+configure terminal
+ip access-list extended BLOCK_VLAN10_HTTPS
+ deny tcp 192.168.0.0 0.0.0.255 any eq https
+ permit ip any any
+
+interface GigabitEthernet0/0/0.10
+ ip access-group BLOCK_VLAN10_HTTPS in
+end
+write memory
+
+
+Si no funciona:
+R2(config)#interface GigabitEthernet0/0/0.30
+R2(config-subif)#ip access-group ONLY_FTP_ACCESS in
+R2(config-subif)#exit
+R2(config)#interface GigabitEthernet0/0/0.40
+R2(config-subif)#ip access-group ONLY_FTP_ACCESS in
+R2(config-subif)#exit
+
+R2(config)#ip access-list extended ONLY_FTP_ACCESS
+R2(config-ext-nacl)#deny ip any any
+
+
+
+
+
+
+
+Ejercicio 2: ACL Estándar con VLAN
+Ubicación: Router R2.
+Interfaz: GigabitEthernet0/0/0.30.
+
+Router R2:
+enable
+configure terminal
+ip access-list extended BLOCK_SMTP_INBOUND_VLAN30
+ deny tcp any host 172.16.1.12 eq smtp
+ permit ip any any
+
+interface GigabitEthernet0/0/0.30
+ ip access-group BLOCK_SMTP_INBOUND_VLAN30 in
+end
+write memory
+
+
+
+Crear la nueva ACL Extendida:
+R1(config)#ip access-list extended BLOCK_VLAN10_WEB_ACCESS
+deny tcp <IP_origen> <wildcard_origen> <IP_destino> <wildcard_destino> eq <puerto>
+deny tcp 192.168.0.0 0.0.0.255 host 172.16.2.12 eq 80
+deny tcp 192.168.0.0 0.0.0.255 host 172.16.2.12 eq 443
+permit ip any any
+
+Aplicar la ACL a la interfaz correcta:
+R1(config)#interface GigabitEthernet0/0/0.10
+R1(config-subif)#ip access-group BLOCK_VLAN10_WEB_ACCESS in
+R1(config-subif)#exit
+Guardar la configuración:
+
+R1(config)#end
+R1#write memory
+
+
+
+
+
+
+
+Ejercicio 3: ACL Estándar con VLAN
+Ubicación: Router R1
+Interfaz: GigabitEthernet0/0/0.20 (in para tráfico de R2 a R1.20) y GigabitEthernet0/0/0.40 en R2 (in para tráfico de R1 a R2.40).
+
+Router R1:
+enable
+configure terminal
+ip access-list extended BLOCK_VLAN40_VLAN20_R1
+ deny ip 172.16.2.0 0.0.0.255 192.168.1.0 0.0.0.255
+ permit ip any any
+
+interface GigabitEthernet0/0/0.20
+ ip access-group BLOCK_VLAN40_VLAN20_R1 in
+end
+write memory
+
+
+Router R2:
+enable
+configure terminal
+ip access-list extended BLOCK_VLAN20_VLAN40_R2
+ deny ip 192.168.1.0 0.0.0.255 172.16.2.0 0.0.0.255
+ permit ip any any
+
+interface GigabitEthernet0/0/0.40
+ ip access-group BLOCK_VLAN20_VLAN40_R2 in
+end
+write memory
+
+
+Aplicar una ACL para bloquear el acceso al servidor HTTP desde la VLAN_30 hacia la VLAN_40.
+Ubicación: Router R2.
+Interfaz: GigabitEthernet0/0/0.30.
+
+Router R2:
+enable
+configure terminal
+ip access-list extended BLOCK_VLAN30_TO_HTTP
+ deny tcp 172.16.1.0 0.0.0.255 host 172.16.2.12 eq www
+ permit ip any any
+
+interface GigabitEthernet0/0/0.30
+ ip access-group BLOCK_VLAN30_TO_HTTP in
+end
+wriwrite memory
+
+
+Ubicación: Router R1.
+Interfaces: GigabitEthernet0/0/0.10 y GigabitEthernet0/0/0.20.
+
+Router R1:
+enable
+configure terminal
+ip access-list extended PERMIT_FTP_SMTP_VLAN10_VLAN20
+ permit tcp 192.168.0.0 0.0.0.255 192.168.1.0 0.0.0.255 eq ftp
+ permit tcp 192.168.0.0 0.0.0.255 192.168.1.0 0.0.0.255 eq ftp-data
+ permit tcp 192.168.0.0 0.0.0.255 192.168.1.0 0.0.0.255 eq smtp
+ permit tcp 192.168.1.0 0.0.0.255 192.168.0.0 0.0.0.255 eq ftp
+ permit tcp 192.168.1.0 0.0.0.255 192.168.0.0 0.0.0.255 eq ftp-data
+ permit tcp 192.168.1.0 0.0.0.255 192.168.0.0 0.0.0.255 eq smtp
+ deny ip any any
+
+interface GigabitEthernet0/0/0.10
+ ip access-group PERMIT_FTP_SMTP_VLAN10_VLAN20 in
+interface GigabitEthernet0/0/0.20
+ ip access-group PERMIT_FTP_SMTP_VLAN10_VLAN20 in
+end
+write memory
+
+
+
+
+
+
+
+Ejercicio 4: ACL Estándar con VLAN
+
+Crear ACL extendida que permita solamente acceso al servidor DNS en la red 172.16.3.0/24 desde cualquier red, pero que bloquee el acceso a la web HTTP.
+Ubicación: Router R2.
+Interfaz: GigabitEthernet0/0/0.50.
+
+! En Router R2
+enable
+configure terminal
+  ip access-list extended DNS_AND_BLOCK_HTTP
+  permit udp any host 172.16.3.10 eq domain ! Permitir DNS (UDP puerto 53)
+  deny tcp any host 172.16.2.X eq www ! Bloquear HTTP al servidor web (VLAN 40)
+  permit ip any any ! Permite todo lo demás no especificado, para que el DNS funcione
+
+interface GigabitEthernet0/0/0.50
+  ip access-group DNS_AND_BLOCK_HTTP in
+  end
+write memory
+
+
+
+
+
+
+
+Ejercicio 5: ACL Estándar con VLAN
+Ubicación: Router R1.
+Interfaz: GigabitEthernet0/0/0.10.
+
+! En Router R1
+enable
+configure terminal
+  ip access-list extended BLOCK_VLAN10_SERVICES
+  deny tcp 192.168.0.0 0.0.0.255 any eq ftp
+  deny tcp 192.168.0.0 0.0.0.255 any eq ftp-data
+  deny tcp 192.168.0.0 0.0.0.255 any eq www
+  deny tcp 192.168.0.0 0.0.0.255 any eq https
+  deny udp 192.168.0.0 0.0.0.255 any eq domain
+  deny tcp 192.168.0.0 0.0.0.255 any eq smtp
+  permit ip any any ! Permite el resto del tráfico
+
+
+interface GigabitEthernet0/0/0.10
+  ip access-group BLOCK_VLAN10_SERVICES in
+  end
+write memory
+
+
+! En Router R1
+enable
+configure terminal
+  no ip access-list extended BLOCK_VLAN10_SERVICES
+  ip access-list extended BLOCK_VLAN10_SERVICES
+  permit tcp host 192.168.0.11 any eq https ! Permite a la PC específica HTTPS
+  deny tcp 192.168.0.0 0.0.0.255 any eq ftp
+  deny tcp 192.168.0.0 0.0.0.255 any eq ftp-data
+  deny tcp 192.168.0.0 0.0.0.255 any eq www
+  deny tcp 192.168.0.0 0.0.0.255 any eq https
+  deny udp 192.168.0.0 0.0.0.255 any eq domain
+  deny tcp 192.168.0.0 0.0.0.255 any eq smtp
+  permit ip any any
+
+
+interface GigabitEthernet0/0/0.10
+  ip access-group BLOCK_VLAN10_SERVICES in
+  end
+write memory
